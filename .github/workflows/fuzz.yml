@@ -24,11 +24,14 @@ jobs:
       - name: Build fuzz bundle
         run: ./fuzz/build-fuzz-bundle.sh
 
+      - name: Zip roundtrip corpus
+        run: cd ./fuzz/corpus && zip -r roundtrip.zip roundtrip
+
       - name: Upload corpus to FuzzCorp
         uses: asymmetric-research/fuzz-upload-action@34cae36b2ac3df66a149b581482202538541d9f1
         with:
           upload_type: asset
-          upload_path: ./fuzz/corpus/roundtrip
+          upload_path: ./fuzz/corpus/roundtrip.zip
           upload_args: --seed-corpus-group roundtrip
         env:
           FUZZ_API_ORIGIN: ${{ secrets.FUZZ_API_ORIGIN }}
