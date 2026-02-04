@@ -29,7 +29,7 @@ jobs:
         with:
           upload_type: corpus
           upload_path: ./fuzz/corpus/roundtrip
-          upload_args: --seed-corpus-group roundtrip
+          upload_args: --lineage roundtrip
         env:
           FUZZ_API_ORIGIN: ${{ secrets.FUZZ_API_ORIGIN }}
           FUZZ_ORGANIZATION: ${{ secrets.FUZZ_ORGANIZATION }}
