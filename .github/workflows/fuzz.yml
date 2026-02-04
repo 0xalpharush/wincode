@@ -27,7 +27,7 @@ jobs:
       - name: Upload corpus to FuzzCorp
         uses: asymmetric-research/fuzz-upload-action@9c1bed71e10ceb5c6d49ad8837620f83f3f7faac
         with:
-          upload_type: corpus
+          upload_type: asset
           upload_path: ./fuzz/corpus/roundtrip
           upload_args: --seed-corpus-group roundtrip
         env:
