@@ -25,7 +25,7 @@ jobs:
         run: ./fuzz/build-fuzz-bundle.sh
 
       - name: Upload corpus to FuzzCorp
-        uses: asymmetric-research/fuzz-upload-action@9c1bed71e10ceb5c6d49ad8837620f83f3f7faac
+        uses: asymmetric-research/fuzz-upload-action@34cae36b2ac3df66a149b581482202538541d9f1
         with:
           upload_type: asset
           upload_path: ./fuzz/corpus/roundtrip
@@ -38,7 +38,7 @@ jobs:
           FUZZ_PASSWORD: ${{ secrets.FUZZ_PASSWORD }}
 
       - name: Upload bundle to FuzzCorp
-        uses: asymmetric-research/fuzz-upload-action@9c1bed71e10ceb5c6d49ad8837620f83f3f7faac
+        uses: asymmetric-research/fuzz-upload-action@34cae36b2ac3df66a149b581482202538541d9f1
         with:
           upload_type: bundle
           upload_path: ./fuzz/target/bundle
