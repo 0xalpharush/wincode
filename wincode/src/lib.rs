@@ -162,6 +162,10 @@
 //!   default configuration, provided your [`SchemaWrite`] and [`SchemaRead`] schemas and
 //!   [`containers`] match the layout implied by your `serde` types.
 //! - Length encodings are pluggable via [`SeqLen`](len::SeqLen).
+//! - Unlike `bincode`, this crate will fail to serialize or deserialize large
+//!   dynamic data structures by default, but this can be configured. This is
+//!   done for security and performance, as it allows to preallocate these data
+//!   structures safely.
 //!
 //! # Zero-copy deserialization
 //!
@@ -241,7 +245,7 @@
 //! let serialized = wincode::serialize(&byte_ref).unwrap();
 //! let deserialized: ByteRef<'_> = wincode::deserialize(&serialized).unwrap();
 //! assert_eq!(byte_ref, deserialized);
-//! # }  
+//! # }
 //! ```
 //!
 //! ### struct newtype
@@ -297,12 +301,23 @@
 //! wincode supports in-place mutation of zero-copy types.
 //! See [`deserialize_mut`] or [`ZeroCopy::from_bytes_mut`] for more details.
 //!
-//! ## `ZeroCopy` methods
+//! ## `ZeroCopy` and `config::ZeroCopy` methods
 //!
-//! The [`ZeroCopy`] trait provides some convenience methods for
+//! The [`ZeroCopy`] and [`config::ZeroCopy`] traits provide some convenience methods for
 //! working with zero-copy types.
 //!
-//! See [`ZeroCopy::from_bytes`] and [`ZeroCopy::from_bytes_mut`] for more details.
+//! See those trait definitions for more details.
+//!
+//! # Crate Features
+//!
+//! |Feature|Default|Description
+//! |---|---|---|
+//! |`std`|enabled|Enables `std` support.|
+//! |`alloc`|enabled automatically when `std` is enabled|Enables `alloc` support.|
+//! |`solana-short-vec`|disabled|Enables `solana-short-vec` support.|
+//! |`derive`|disabled|Enables the derive macros for [`SchemaRead`] and [`SchemaWrite`].|
+//! |`uuid`|disabled|Enables support for the `uuid` crate.|
+//! |`uuid-serde-compat`|disabled|Encodes and decodes `uuid::Uuid` with an additional length prefix, making it compatible with `serde`'s serialization scheme. Note that enabling this will result in strictly worse performance.|
 //!
 //! # Derive attributes
 //!
@@ -313,7 +328,7 @@
 //! |`no_suppress_unused`|`bool`|`false`|Disable unused field lints suppression. Only usable on structs with `from`.|
 //! |`struct_extensions`|`bool`|`false`|Generates placement initialization helpers on `SchemaRead` struct implementations|
 //! |`tag_encoding`|`Type`|`None`|Specifies the encoding/decoding schema to use for the variant discriminant. Only usable on enums.|
-//! |`assert_zero_copy`|`bool`|`false`|Generates compile-time asserts to ensure the type meets zero-copy requirements.|
+//! |`assert_zero_copy`|`bool`\|`Path`|`false`|Generates compile-time asserts to ensure the type meets zero-copy requirements. Can specify a custom config path, will use the [`DefaultConfig`](config::DefaultConfig) if `bool` form is used.|
 //!
 //! ### `no_suppress_unused`
 //!
@@ -404,7 +419,7 @@
 //!
 //! ```
 //! # #[cfg(all(feature = "alloc", feature = "derive"))] {
-//! # use wincode::{SchemaRead, SchemaWrite, io::Reader, error::ReadResult};
+//! # use wincode::{SchemaRead, SchemaWrite, io::Reader, error::ReadResult, config::Config};
 //! # use serde::{Serialize, Deserialize};
 //! # use core::mem::MaybeUninit;
 //! # #[derive(Debug, PartialEq, Eq)]
@@ -431,7 +446,7 @@
 //! }
 //!
 //! // Assume for some reason we have to manually implement `SchemaRead` for `Message`.
-//! impl<'de> SchemaRead<'de> for Message {
+//! unsafe impl<'de, C: Config> SchemaRead<'de, C> for Message {
 //!     type Dst = Message;
 //!
 //!     fn read(reader: &mut impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
@@ -443,12 +458,12 @@
 //!         // Note that the order matters here. Values are dropped in reverse
 //!         // declaration order, and we need to ensure `header_builder` is dropped
 //!         // before `payload_builder` in the event of an error or panic.
-//!         let mut payload_builder = PayloadUninitBuilder::from_maybe_uninit_mut(payload);
+//!         let mut payload_builder = PayloadUninitBuilder::<C>::from_maybe_uninit_mut(payload);
 //!         unsafe {
 //!             // payload.header will be marked as initialized if the function succeeds.
 //!             payload_builder.init_header_with(|header| {
 //!                 // Read directly into the projected MaybeUninit<Header> slot.
-//!                 let mut header_builder = HeaderUninitBuilder::from_maybe_uninit_mut(header);
+//!                 let mut header_builder = HeaderUninitBuilder::<C>::from_maybe_uninit_mut(header);
 //!                 header_builder.read_num_required_signatures(reader)?;
 //!                 header_builder.read_num_signed_accounts(reader)?;
 //!                 header_builder.read_num_unsigned_accounts(reader)?;
@@ -486,6 +501,14 @@
 //! |Attribute|Type|Default|Description
 //! |---|---|---|---|
 //! |`with`|`Type`|`None`|Overrides the default `SchemaRead` or `SchemaWrite` implementation for the field.|
+//! |`skip`|`bool`\|`Expr`|`false`|Skips the field during serialization and deserialization (initializing with default value).|
+//!
+//! ### `skip`
+//!
+//! Allows omitting the field during serialization and deserialization. When type is initialized
+//! during deserialization, the field will be set to the default value. This is typically
+//! `Default::default()` (when using `#[wincode(skip)]` or `#[wincode(skip(default))]`), but can
+//! be overridden by specifying `#[wincode(skip(default_val = <value>))]`.
 //!
 //! ## Variant level (enum variants)
 //! |Attribute|Type|Default|Description
@@ -534,6 +557,7 @@ mod schema;
 pub use schema::*;
 mod serde;
 pub use serde::*;
+pub mod config;
 #[cfg(test)]
 mod proptest_config;
 #[cfg(feature = "derive")]

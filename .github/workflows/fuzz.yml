@@ -1,0 +1,50 @@
+name: Upload Fuzzing Bundle
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+
+      - uses: dtolnay/install@cargo-fuzz
+      - run: cargo +nightly fuzz build --no-trace-compares
+
+      - name: Build fuzz bundle
+        run: ./fuzz/build-fuzz-bundle.sh
+
+      - name: Upload corpus to FuzzCorp
+        uses: asymmetric-research/fuzz-upload-action@v1
+        with:
+          upload_type: corpus
+          upload_path: ./fuzz/corpus/roundtrip
+          upload_args: --seed-corpus-group roundtrip
+        env:
+          FUZZ_API_ORIGIN: ${{ secrets.FUZZ_API_ORIGIN }}
+          FUZZ_ORGANIZATION: ${{ secrets.FUZZ_ORGANIZATION }}
+          FUZZ_PROJECT: ${{ secrets.FUZZ_PROJECT }}
+          FUZZ_USER: ${{ secrets.FUZZ_USER }}
+          FUZZ_PASSWORD: ${{ secrets.FUZZ_PASSWORD }}
+
+      - name: Upload bundle to FuzzCorp
+        uses: asymmetric-research/fuzz-upload-action@v1
+        with:
+          upload_type: bundle
+          upload_path: ./fuzz/target/bundle
+        env:
+          FUZZ_API_ORIGIN: ${{ secrets.FUZZ_API_ORIGIN }}
+          FUZZ_ORGANIZATION: ${{ secrets.FUZZ_ORGANIZATION }}
+          FUZZ_PROJECT: ${{ secrets.FUZZ_PROJECT }}
+          FUZZ_USER: ${{ secrets.FUZZ_USER }}
+          FUZZ_PASSWORD: ${{ secrets.FUZZ_PASSWORD }}
