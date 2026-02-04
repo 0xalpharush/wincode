@@ -38,7 +38,7 @@ jobs:
           FUZZ_PASSWORD: ${{ secrets.FUZZ_PASSWORD }}
 
       - name: Upload bundle to FuzzCorp
-        uses: asymmetric-research/fuzz-upload-action@v1
+        uses: asymmetric-research/fuzz-upload-action@9c1bed71e10ceb5c6d49ad8837620f83f3f7faac
         with:
           upload_type: bundle
           upload_path: ./fuzz/target/bundle
