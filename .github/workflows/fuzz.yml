@@ -47,7 +47,7 @@ jobs:
         with:
           upload_type: corpus
           upload_path: ./fuzz/corpus/roundtrip/
-          upload_args: --lineage roundtrip
+          upload_args: --lineage roundtrip --kind seed
         env:
           FUZZ_API_ORIGIN: ${{ secrets.FUZZ_API_ORIGIN }}
           FUZZ_ORGANIZATION: anza
