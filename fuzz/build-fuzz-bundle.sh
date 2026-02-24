@@ -73,7 +73,8 @@ for target in "${targets[@]}"; do
 			"Name": "$target",
 			"SeedCorpusGroup": "$target",
 			"Confs": [
-				{
+				{	
+					"Name": "$target",
 					"Driver": {
 						"Type": "libfuzzer",
 						"Params": {
